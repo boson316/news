@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>每日／每週 國際・美國新聞蒐集</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>國際・美國新聞蒐集</h1>
+      <p>選擇區塊與時間範圍，每區 30～50 則新聞</p>
+    </header>
+
+    <section class="controls">
+      <form method="get" action="{{ url_for('index') }}" class="filter-form">
+        <label>
+          選擇區塊：
+          <select name="block">
+            {% for value, label in block_options %}
+            <option value="{{ value }}" {% if block == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          時間範圍：
+          <select name="period">
+            <option value="day" {% if period == 'day' %}selected{% endif %}>
+              今天 / 最近 24 小時
+            </option>
+            <option value="week" {% if period == 'week' %}selected{% endif %}>
+              最近一週
+            </option>
+            <option value="month" {% if period == 'month' %}selected{% endif %}>
+              最近一個月
+            </option>
+            <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>
+              最近一季（3 個月）
+            </option>
+            <option
+              value="halfyear"
+              {% if period == 'halfyear' %}selected{% endif %}
+            >
+              最近半年（6 個月）
+            </option>
+            <option value="all" {% if period == 'all' %}selected{% endif %}>
+              所有（最新優先）
+            </option>
+          </select>
+        </label>
+
+        <button type="submit">顯示新聞</button>
+        <a class="button secondary" href="{{ url_for('refresh') }}"
+          >手動更新新聞</a
+        >
+      </form>
+    </section>
+
+    <main>
+      <section class="block-content">
+        <h2>{{ block_label }}</h2>
+        {% if articles %}
+        <p class="block-meta">共 {{ articles|length }} 則</p>
+        <ul class="article-list">
+          {% for a in articles %}
+          <li class="article-item">
+            <h3 class="article-title">
+              <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">
+                {{ a.title }}
+              </a>
+            </h3>
+            <div class="meta">
+              <span class="badge">{{ a.category }}</span>
+              <span class="source">{{ a.source }}</span>
+              {% if a.published_at %}
+              <span class="time">
+                {{ a.published_at }}
+              </span>
+              {% endif %}
+            </div>
+            {% if a.summary %}
+            <p class="summary">
+              {{ a.summary|striptags|truncate(200, True, '...') }}
+            </p>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">
+          目前沒有符合條件的新聞，可試試切換時間範圍或「手動更新新聞」。
+        </p>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer>
+      <p>資料來源：BBC、Reuters 等公開 RSS，僅供學習與個人研究使用。</p>
+    </footer>
+  </body>
+  </html>

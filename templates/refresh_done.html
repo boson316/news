@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>更新完成 - 國際・美國新聞蒐集</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>新聞更新完成</h1>
+    </header>
+
+    <main>
+      <p>已嘗試從各個 RSS 來源抓取最新新聞並寫入資料庫。</p>
+      <p>
+        <a class="button" href="{{ url_for('index') }}">回到首頁查看最新新聞</a>
+      </p>
+    </main>
+
+    <footer>
+      <p>資料來源：BBC、Reuters 等公開 RSS，僅供學習與個人研究使用。</p>
+    </footer>
+  </body>
+  </html>
+

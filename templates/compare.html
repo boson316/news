@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>文章比較 - 國際・美國新聞蒐集</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>文章比較</h1>
+      <p>從下方列表中選擇最多兩篇文章進行內容對照</p>
+      <nav>
+        <a class="button secondary" href="{{ url_for('index') }}">回到首頁</a>
+        <a class="button secondary" href="{{ url_for('refresh') }}"
+          >手動更新新聞</a
+        >
+      </nav>
+    </header>
+
+    <main class="compare-layout">
+      <section class="select-panel">
+        <h2>選擇要比較的文章（最多兩篇）</h2>
+        <form method="post" action="{{ url_for('compare') }}">
+          <ul class="article-list selectable">
+            {% for a in articles %}
+            <li class="article-item">
+              <label>
+                <input
+                  type="checkbox"
+                  name="article_id"
+                  value="{{ a.id }}"
+                  {% if selected_articles and a.id in [sa.id for sa in selected_articles] %}checked{% endif %}
+                />
+                <span class="article-title">{{ a.title }}</span>
+                <span class="meta">
+                  <span class="badge">{{ a.category }}</span>
+                  <span class="source">{{ a.source }}</span>
+                  {% if a.published_at %}
+                  <span class="time">
+                    {{ a.published_at }}
+                  </span>
+                  {% endif %}
+                </span>
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+          <button type="submit">開始比較</button>
+        </form>
+      </section>
+
+      <section class="result-panel">
+        <h2>比較結果</h2>
+        {% if selected_articles|length == 0 %}
+        <p class="empty">尚未選擇任何文章。</p>
+        {% elif selected_articles|length == 1 %}
+        <article class="compare-column">
+          <h3>{{ selected_articles[0].title }}</h3>
+          <div class="meta">
+            <span class="badge">{{ selected_articles[0].category }}</span>
+            <span class="source">{{ selected_articles[0].source }}</span>
+            {% if selected_articles[0].published_at %}
+            <span class="time">
+              {{ selected_articles[0].published_at }}
+            </span>
+            {% endif %}
+          </div>
+          {% if selected_articles[0].summary %}
+          <p>
+            {{ selected_articles[0].summary|striptags|replace('\n', '<br>')|safe }}
+          </p>
+          {% endif %}
+          <p>
+            <a
+              href="{{ selected_articles[0].url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              >前往原文</a
+            >
+          </p>
+        </article>
+        {% else %}
+        <div class="compare-columns">
+          {% for a in selected_articles %}
+          <article class="compare-column">
+            <h3>{{ a.title }}</h3>
+            <div class="meta">
+              <span class="badge">{{ a.category }}</span>
+              <span class="source">{{ a.source }}</span>
+              {% if a.published_at %}
+              <span class="time">
+                {{ a.published_at }}
+              </span>
+              {% endif %}
+            </div>
+            {% if a.summary %}
+            <p>
+              {{ a.summary|striptags|replace('\n', '<br>')|safe }}
+            </p>
+            {% endif %}
+            <p>
+              <a
+                href="{{ a.url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                >前往原文</a
+              >
+            </p>
+          </article>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer>
+      <p>資料來源：BBC、Reuters 等公開 RSS，僅供學習與個人研究使用。</p>
+    </footer>
+  </body>
+  </html>
+
