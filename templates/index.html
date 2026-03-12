@@ -11,7 +11,12 @@
   <body>
     <header>
       <h1>國際・美國新聞蒐集</h1>
-      <p>選擇區塊與時間範圍，每區 30～50 則新聞</p>
+      <p>選擇區塊、來源與關鍵字，每區 30～50 則新聞</p>
+      <nav>
+        <a class="button secondary" href="{{ url_for('favorites') }}"
+          >我的收藏</a
+        >
+      </nav>
     </header>
 
     <section class="controls">
@@ -26,6 +31,27 @@
             {% endfor %}
           </select>
         </label>
+        <label>
+          來源：
+          <select name="source">
+            <option value="">全部來源</option>
+            {% for src in sources %}
+            <option value="{{ src }}" {% if selected_source == src %}selected{% endif %}>
+              {{ src }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          關鍵字：
+          <input
+            type="text"
+            name="q"
+            value="{{ keyword }}"
+            placeholder="例如：AI、利率、晶片…"
+          />
+        </label>
+
         <label>
           時間範圍：
           <select name="period">
@@ -87,6 +113,18 @@
               {{ a.summary|striptags|truncate(200, True, '...') }}
             </p>
             {% endif %}
+            <form
+              method="post"
+              action="{{ url_for('favorite') }}"
+              class="favorite-form"
+            >
+              <input type="hidden" name="article_id" value="{{ a.id }}" />
+              <input type="hidden" name="block" value="{{ block }}" />
+              <input type="hidden" name="period" value="{{ period }}" />
+              <button type="submit" class="button secondary small">
+                收藏
+              </button>
+            </form>
           </li>
           {% endfor %}
         </ul>

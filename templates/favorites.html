@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>我的收藏 - 國際・美國新聞蒐集</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>我的收藏</h1>
+      <p>你標記想回頭看的新聞清單（最新在上方）</p>
+      <nav>
+        <a class="button secondary" href="{{ url_for('index') }}">回到首頁</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="block-content">
+        {% if favorites %}
+        <p class="block-meta">共 {{ favorites|length }} 則收藏</p>
+        <ul class="article-list">
+          {% for a in favorites %}
+          <li class="article-item">
+            <h3 class="article-title">
+              <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">
+                {{ a.title }}
+              </a>
+            </h3>
+            <div class="meta">
+              <span class="badge">{{ a.category }}</span>
+              <span class="source">{{ a.source }}</span>
+              {% if a.published_at %}
+              <span class="time">
+                {{ a.published_at }}
+              </span>
+              {% endif %}
+              {% if a.created_at %}
+              <span class="time">
+                收藏於 {{ a.created_at }}
+              </span>
+              {% endif %}
+            </div>
+            {% if a.summary %}
+            <p class="summary">
+              {{ a.summary|striptags|truncate(200, True, '...') }}
+            </p>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">
+          目前還沒有收藏的文章，回到首頁點每則新聞下方的「收藏」按鈕即可加入。
+        </p>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer>
+      <p>資料來源：BBC、Reuters 等公開 RSS，僅供學習與個人研究使用。</p>
+    </footer>
+  </body>
+  </html>
+
