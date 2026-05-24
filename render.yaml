@@ -1,0 +1,8 @@
+# Render Blueprint (free tier)
+# Push this folder to a GitHub repo root, then: render.com → New → Blueprint
+services:
+  - type: web
+    name: news-aggregator
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT

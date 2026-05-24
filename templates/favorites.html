@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>My Favorites — News Aggregator</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>My Favorites</h1>
+      <p>Articles you saved to read later (newest first)</p>
+      <nav>
+        <a class="button secondary" href="{{ url_for('index') }}">Back to home</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="block-content">
+        {% if favorites %}
+        <p class="block-meta">{{ favorites|length }} saved article(s)</p>
+        <ul class="article-list">
+          {% for a in favorites %}
+          <li class="article-item">
+            <h3 class="article-title">
+              <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">
+                {{ a.title }}
+              </a>
+            </h3>
+            <div class="meta">
+              <span class="badge">{{ category_labels.get(a.category, a.category) }}</span>
+              <span class="source">{{ a.source }}</span>
+              {% if a.published_at %}
+              <span class="time">
+                {{ a.published_at }}
+              </span>
+              {% endif %}
+              {% if a.created_at %}
+              <span class="time">
+                Saved {{ a.created_at }}
+              </span>
+              {% endif %}
+            </div>
+            {% if a.summary %}
+            <p class="summary">
+              {{ a.summary|striptags|truncate(200, True, '...') }}
+            </p>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty">
+          No saved articles yet. Go to the home page and click Save on any headline.
+        </p>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer>
+      <p>Data from public RSS feeds (BBC, Reuters, etc.). For learning and personal research only.</p>
+    </footer>
+  </body>
+  </html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Refresh complete — News Aggregator</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>News refresh complete</h1>
+    </header>
+
+    <main>
+      <p>Fetched the latest headlines from all RSS sources and stored them in the database.</p>
+      <p>
+        <a class="button" href="{{ url_for('index') }}">Back to home</a>
+      </p>
+    </main>
+
+    <footer>
+      <p>Data from public RSS feeds (BBC, Reuters, etc.). For learning and personal research only.</p>
+    </footer>
+  </body>
+  </html>

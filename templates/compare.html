@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Compare articles — News Aggregator</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>Compare articles</h1>
+      <p>Select up to two articles from the list below</p>
+      <nav>
+        <a class="button secondary" href="{{ url_for('index') }}">Back to home</a>
+        <a class="button secondary" href="{{ url_for('refresh') }}"
+          >Refresh News</a
+        >
+      </nav>
+    </header>
+
+    <main class="compare-layout">
+      <section class="select-panel">
+        <h2>Select articles to compare (max 2)</h2>
+        <form method="post" action="{{ url_for('compare') }}">
+          <ul class="article-list selectable">
+            {% for a in articles %}
+            <li class="article-item">
+              <label>
+                <input
+                  type="checkbox"
+                  name="article_id"
+                  value="{{ a.id }}"
+                  {% if selected_articles and a.id in [sa.id for sa in selected_articles] %}checked{% endif %}
+                />
+                <span class="article-title">{{ a.title }}</span>
+                <span class="meta">
+                  <span class="badge">{{ category_labels.get(a.category, a.category) }}</span>
+                  <span class="source">{{ a.source }}</span>
+                  {% if a.published_at %}
+                  <span class="time">
+                    {{ a.published_at }}
+                  </span>
+                  {% endif %}
+                </span>
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+          <button type="submit">Compare</button>
+        </form>
+      </section>
+
+      <section class="result-panel">
+        <h2>Comparison</h2>
+        {% if selected_articles|length == 0 %}
+        <p class="empty">No articles selected.</p>
+        {% elif selected_articles|length == 1 %}
+        <article class="compare-column">
+          <h3>{{ selected_articles[0].title }}</h3>
+          <div class="meta">
+            <span class="badge">{{ category_labels.get(selected_articles[0].category, selected_articles[0].category) }}</span>
+            <span class="source">{{ selected_articles[0].source }}</span>
+            {% if selected_articles[0].published_at %}
+            <span class="time">
+              {{ selected_articles[0].published_at }}
+            </span>
+            {% endif %}
+          </div>
+          {% if selected_articles[0].summary %}
+          <p>
+            {{ selected_articles[0].summary|striptags|replace('\n', '<br>')|safe }}
+          </p>
+          {% endif %}
+          <p>
+            <a
+              href="{{ selected_articles[0].url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Read original</a
+            >
+          </p>
+        </article>
+        {% else %}
+        <div class="compare-columns">
+          {% for a in selected_articles %}
+          <article class="compare-column">
+            <h3>{{ a.title }}</h3>
+            <div class="meta">
+              <span class="badge">{{ category_labels.get(a.category, a.category) }}</span>
+              <span class="source">{{ a.source }}</span>
+              {% if a.published_at %}
+              <span class="time">
+                {{ a.published_at }}
+              </span>
+              {% endif %}
+            </div>
+            {% if a.summary %}
+            <p>
+              {{ a.summary|striptags|replace('\n', '<br>')|safe }}
+            </p>
+            {% endif %}
+            <p>
+              <a
+                href="{{ a.url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Read original</a
+              >
+            </p>
+          </article>
+          {% endfor %}
+            </div>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer>
+      <p>Data from public RSS feeds (BBC, Reuters, etc.). For learning and personal research only.</p>
+    </footer>
+  </body>
+  </html>

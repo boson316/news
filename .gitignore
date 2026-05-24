@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+
+# Runtime data
+news.db
+*.db
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Internal docs (keep out of public repos)
+AGENTS.md
+TASKS.md
+KPI.md
+BENCHMARK.md
+CI_GATES.md
