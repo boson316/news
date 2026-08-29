@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ html_lang() }}">
   <head>
     <meta charset="UTF-8" />
-    <title>News Aggregator — Daily & Weekly Headlines</title>
+    <title>{{ t('app_title') }}</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
@@ -10,19 +10,29 @@
   </head>
   <body>
     <header>
-      <h1>News Aggregator</h1>
-      <p>Filter by section, source, and keyword — up to 50 articles per section</p>
+      <div class="header-top">
+        <div>
+          <h1>{{ t('app_title') }}</h1>
+          <p>{{ t('app_subtitle') }}</p>
+        </div>
+        <a
+          class="lang-switch"
+          href="{{ url_for('index', lang=other_lang(), block=block, period=period, source=selected_source, q=keyword) }}"
+          >{{ t('lang_switch') }}</a
+        >
+      </div>
       <nav>
-        <a class="button secondary" href="{{ url_for('favorites') }}"
-          >My Favorites</a
+        <a class="button secondary" href="{{ url_for('favorites', lang=lang()) }}"
+          >{{ t('my_favorites') }}</a
         >
       </nav>
     </header>
 
     <section class="controls">
       <form method="get" action="{{ url_for('index') }}" class="filter-form">
+        <input type="hidden" name="lang" value="{{ lang() }}" />
         <label>
-          Section:
+          {{ t('section') }}:
           <select name="block">
             {% for value, label in block_options %}
             <option value="{{ value }}" {% if block == value %}selected{% endif %}>
@@ -32,9 +42,9 @@
           </select>
         </label>
         <label>
-          Source:
+          {{ t('source') }}:
           <select name="source">
-            <option value="">All sources</option>
+            <option value="">{{ t('all_sources') }}</option>
             {% for src in sources %}
             <option value="{{ src }}" {% if selected_source == src %}selected{% endif %}>
               {{ src }}
@@ -43,45 +53,45 @@
           </select>
         </label>
         <label>
-          Keyword:
+          {{ t('keyword') }}:
           <input
             type="text"
             name="q"
             value="{{ keyword }}"
-            placeholder="e.g. AI, rates, chips…"
+            placeholder="{{ t('keyword_placeholder') }}"
           />
         </label>
 
         <label>
-          Time range:
+          {{ t('time_range') }}:
           <select name="period">
             <option value="day" {% if period == 'day' %}selected{% endif %}>
-              Today / last 24 hours
+              {{ t('period_day') }}
             </option>
             <option value="week" {% if period == 'week' %}selected{% endif %}>
-              Last week
+              {{ t('period_week') }}
             </option>
             <option value="month" {% if period == 'month' %}selected{% endif %}>
-              Last month
+              {{ t('period_month') }}
             </option>
             <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>
-              Last quarter (3 months)
+              {{ t('period_quarter') }}
             </option>
             <option
               value="halfyear"
               {% if period == 'halfyear' %}selected{% endif %}
             >
-              Last 6 months
+              {{ t('period_halfyear') }}
             </option>
             <option value="all" {% if period == 'all' %}selected{% endif %}>
-              All (newest first)
+              {{ t('period_all') }}
             </option>
           </select>
         </label>
 
-        <button type="submit">Show news</button>
-        <a class="button secondary" href="{{ url_for('refresh') }}"
-          >Refresh News</a
+        <button type="submit">{{ t('show_news') }}</button>
+        <a class="button secondary" href="{{ url_for('refresh', lang=lang(), block=block, period=period) }}"
+          >{{ t('refresh_news') }}</a
         >
       </form>
     </section>
@@ -90,7 +100,7 @@
       <section class="block-content">
         <h2>{{ block_label }}</h2>
         {% if articles %}
-        <p class="block-meta">{{ articles|length }} article(s)</p>
+        <p class="block-meta">{{ t('article_count', count=articles|length) }}</p>
         <ul class="article-list">
           {% for a in articles %}
           <li class="article-item">
@@ -121,8 +131,9 @@
               <input type="hidden" name="article_id" value="{{ a.id }}" />
               <input type="hidden" name="block" value="{{ block }}" />
               <input type="hidden" name="period" value="{{ period }}" />
+              <input type="hidden" name="lang" value="{{ lang() }}" />
               <button type="submit" class="button secondary small">
-                Save
+                {{ t('save') }}
               </button>
             </form>
           </li>
@@ -130,14 +141,14 @@
         </ul>
         {% else %}
         <p class="empty">
-          No articles match your filters. Try a wider time range or click Refresh News.
+          {{ t('empty_articles') }}
         </p>
         {% endif %}
       </section>
     </main>
 
     <footer>
-      <p>Data from public RSS feeds (BBC, Reuters, etc.). For learning and personal research only.</p>
+      <p>{{ t('footer_note') }}</p>
     </footer>
   </body>
   </html>

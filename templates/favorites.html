@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ html_lang() }}">
   <head>
     <meta charset="UTF-8" />
-    <title>My Favorites — News Aggregator</title>
+    <title>{{ t('favorites_title') }} — {{ t('app_title') }}</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
@@ -10,17 +10,24 @@
   </head>
   <body>
     <header>
-      <h1>My Favorites</h1>
-      <p>Articles you saved to read later (newest first)</p>
+      <div class="header-top">
+        <div>
+          <h1>{{ t('favorites_title') }}</h1>
+          <p>{{ t('favorites_subtitle') }}</p>
+        </div>
+        <a class="lang-switch" href="{{ url_for('favorites', lang=other_lang()) }}"
+          >{{ t('lang_switch') }}</a
+        >
+      </div>
       <nav>
-        <a class="button secondary" href="{{ url_for('index') }}">Back to home</a>
+        <a class="button secondary" href="{{ url_for('index', lang=lang()) }}">{{ t('back_home') }}</a>
       </nav>
     </header>
 
     <main>
       <section class="block-content">
         {% if favorites %}
-        <p class="block-meta">{{ favorites|length }} saved article(s)</p>
+        <p class="block-meta">{{ t('saved_count', count=favorites|length) }}</p>
         <ul class="article-list">
           {% for a in favorites %}
           <li class="article-item">
@@ -39,7 +46,7 @@
               {% endif %}
               {% if a.created_at %}
               <span class="time">
-                Saved {{ a.created_at }}
+                {{ t('saved_at', time=a.created_at) }}
               </span>
               {% endif %}
             </div>
@@ -53,14 +60,14 @@
         </ul>
         {% else %}
         <p class="empty">
-          No saved articles yet. Go to the home page and click Save on any headline.
+          {{ t('empty_favorites') }}
         </p>
         {% endif %}
       </section>
     </main>
 
     <footer>
-      <p>Data from public RSS feeds (BBC, Reuters, etc.). For learning and personal research only.</p>
+      <p>{{ t('footer_note') }}</p>
     </footer>
   </body>
   </html>

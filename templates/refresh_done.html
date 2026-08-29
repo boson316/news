@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ html_lang() }}">
   <head>
     <meta charset="UTF-8" />
-    <title>Refresh complete — News Aggregator</title>
+    <title>{{ t('refresh_done_title') }} — {{ t('app_title') }}</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
@@ -10,18 +10,25 @@
   </head>
   <body>
     <header>
-      <h1>News refresh complete</h1>
+      <div class="header-top">
+        <div>
+          <h1>{{ t('refresh_done_title') }}</h1>
+        </div>
+        <a class="lang-switch" href="{{ url_for('index', lang=other_lang()) }}"
+          >{{ t('lang_switch') }}</a
+        >
+      </div>
     </header>
 
     <main>
-      <p>Fetched the latest headlines from all RSS sources and stored them in the database.</p>
+      <p>{{ t('refresh_done_body') }}</p>
       <p>
-        <a class="button" href="{{ url_for('index') }}">Back to home</a>
+        <a class="button" href="{{ url_for('index', lang=lang()) }}">{{ t('back_home') }}</a>
       </p>
     </main>
 
     <footer>
-      <p>Data from public RSS feeds (BBC, Reuters, etc.). For learning and personal research only.</p>
+      <p>{{ t('footer_note') }}</p>
     </footer>
   </body>
   </html>

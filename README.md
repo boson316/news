@@ -2,58 +2,86 @@
 
 **Languages:** [English](README.md) · [中文](README.zh-TW.md)
 
-A lightweight news aggregator built with Python, Flask, and SQLite. It pulls headlines from public international, US, tech, business, and Chinese RSS feeds. Run it locally or deploy to the cloud and open the URL in a browser—no need to keep `python app.py` running on your machine.
+**Live:** https://boson-news-app.onrender.com
+
+A lightweight news aggregator built with Python, Flask, and SQLite. Pulls headlines from public RSS feeds (international, tech, business, Chinese). Default UI is **Traditional Chinese** with an English toggle. Run locally or deploy to Render.
 
 > For personal learning and research only. Not for commercial use.
 
 ---
 
-## Option 1: Use it online (deploy to the cloud)
+## Features
 
-After deploying, you get a URL like `https://your-app.onrender.com`. Open it in any browser—no local terminal required.
+| Feature | Description |
+|---------|-------------|
+| Chinese default | Traditional Chinese UI; switch to English in the header |
+| Auto-fetch | Fetches RSS on first visit when the database is empty |
+| Background refresh | Refreshes every 30 minutes after startup if stale |
+| Scheduled cron | Use cron-job.org every 14 minutes → `/cron/refresh` |
+| Filters | Section, source, keyword, time range |
+| Favorites | Save articles to read later |
 
-### Recommended: Render (free tier)
+---
 
-1. **Push to GitHub**
-   - Create a new repo (e.g. `news-aggregator`)
-   - Upload the contents of this folder to the **repo root** (`app.py`, `requirements.txt`, `templates/`, `static/`, `render.yaml`, `runtime.txt`, `.gitignore`). Do **not** nest them inside an extra folder, or Render will not find `app.py`.
+## Option 1: Use online (Render)
 
-2. **Deploy on Render**
-   - Go to [render.com](https://render.com) and sign in with GitHub
-   - **New → Web Service** → select your repo
-   - **Build command:** `pip install -r requirements.txt`
-   - **Start command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
-   - Click **Create Web Service** and wait for the build
+**GitHub:** https://github.com/boson316/news
 
-   **Or** use the included Blueprint: **New → Blueprint** → connect the repo; `render.yaml` applies the settings automatically.
+### Deploy
 
-3. **Open your site**
-   - Render gives you a URL, e.g. `https://news-aggregator-xxxx.onrender.com`
-   - On first visit, click **Refresh News**, wait a few seconds, then return to the home page.
+1. Push this folder to the **repo root** (`app.py`, `requirements.txt`, `templates/`, `static/`, `render.yaml`, `runtime.txt`)
+2. [Render](https://render.com) → **New → Web Service** → select repo
+3. **Build:** `pip install -r requirements.txt`
+4. **Start:** `gunicorn app:app --bind 0.0.0.0:$PORT`
+5. Or use **Blueprint** with `render.yaml` (service name `boson-news-app`)
 
-**Note:** On Render's free tier, the service sleeps after inactivity. The first request after sleep may take 30–60 seconds.
+### Verify deployment
+
+| URL | Expected |
+|-----|----------|
+| https://boson-news-app.onrender.com/ | Home page (Chinese by default) |
+| https://boson-news-app.onrender.com/cron/refresh | `{"status":"started"}` |
+| https://boson-news-app.onrender.com/health | `{"status":"ok","articles":...}` |
+
+### cron-job.org (recommended)
+
+On Render's free tier, the service sleeps after ~15 minutes of inactivity:
+
+1. [cron-job.org](https://cron-job.org) → **Create cronjob**
+2. **URL:** `https://boson-news-app.onrender.com/cron/refresh`
+3. **Method:** GET
+4. **Schedule:** every 14 minutes
+5. Check **Execution history** for `{"status":"started"}` or `{"status":"already_running"}`
+
+> `/cron/refresh` responds immediately and fetches RSS in the background (avoids the 30s cron-job.org timeout).
 
 ---
 
 ## Option 2: Run locally
-
-### Requirements
-
-- Python 3.10+
-- pip
-
-### Setup
 
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
 
-Open `http://127.0.0.1:5000`. The app binds to `0.0.0.0`, so you can also reach it from other devices on your LAN via `http://<your-ip>:5000`.
+Open `http://127.0.0.1:5000`
 
 ---
 
-## Features
+## API endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/` | Home (auto-fetch if DB empty) |
+| GET | `/refresh` | Manual sync refresh, then redirect home |
+| GET | `/cron/refresh` | External scheduler; background refresh |
+| GET | `/health` | Health check |
+| GET | `/favorites` | Saved articles |
+| POST | `/favorite` | Save an article |
+
+---
+
+## Sections
 
 | Section | Description |
 |---------|-------------|
@@ -61,16 +89,8 @@ Open `http://127.0.0.1:5000`. The app binds to `0.0.0.0`, so you can also reach 
 | Tech | Technology headlines |
 | Business | Markets and finance |
 | Big Tech | NVIDIA, Google, Amazon, Microsoft, Meta |
-| NVIDIA / Google / Microsoft | Company-specific keyword filters |
-| Chinese | Traditional Chinese sources (BBC 中文, DW, LTN, …) |
-
-**Filters:** time range (24h / week / month / quarter / half-year / all), source dropdown, keyword search, favorites.
-
----
-
-## Customize RSS sources
-
-Edit `RSS_SOURCES` in `app.py` to add or remove feeds. Current sources include BBC, Reuters, TechCrunch, TechNews, Liberty Times, ETtoday, UDN, BBC Chinese, and DW Chinese.
+| NVIDIA / Google / Microsoft | Company keyword filters |
+| Chinese | Traditional Chinese sources |
 
 ---
 
@@ -78,11 +98,20 @@ Edit `RSS_SOURCES` in `app.py` to add or remove feeds. Current sources include B
 
 ```
 .
-├── app.py              # Flask app + RSS fetcher
+├── app.py                 # Flask app, RSS fetcher, i18n
 ├── requirements.txt
-├── runtime.txt         # Python version for Render
-├── render.yaml         # Render Blueprint
-├── templates/          # HTML pages
+├── runtime.txt            # Python 3.11.9 for Render
+├── render.yaml            # Render Blueprint
+├── templates/
+│   ├── index.html
+│   ├── favorites.html
+│   └── refresh_done.html
 ├── static/style.css
-└── news.db             # SQLite (created at runtime; gitignored)
+└── news.db                # SQLite (runtime; gitignored)
 ```
+
+---
+
+## Customize RSS sources
+
+Edit `RSS_SOURCES` in `app.py`. Current feeds include BBC, Reuters, TechCrunch, TechNews, Liberty Times, ETtoday, UDN, BBC Chinese, and DW Chinese.

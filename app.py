@@ -1,16 +1,127 @@
 import os
 import sqlite3
+import threading
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, g, jsonify, render_template, request, redirect, url_for
 import feedparser
 
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "news.db")
+REFRESH_INTERVAL_MINUTES = 30
+SUPPORTED_LANGS = ("zh-TW", "en")
+DEFAULT_LANG = "zh-TW"
+
+TRANSLATIONS: dict[str, dict[str, str]] = {
+    "zh-TW": {
+        "app_title": "新聞蒐集",
+        "app_subtitle": "依類別、來源與關鍵字篩選 — 每類最多 50 篇文章",
+        "my_favorites": "我的最愛",
+        "section": "類別",
+        "source": "來源",
+        "all_sources": "全部來源",
+        "keyword": "關鍵字",
+        "keyword_placeholder": "例如：人工智慧、利率、晶片…",
+        "time_range": "時間範圍",
+        "period_day": "今日／過去 24 小時",
+        "period_week": "過去一週",
+        "period_month": "過去一個月",
+        "period_quarter": "過去一季（3 個月）",
+        "period_halfyear": "過去半年",
+        "period_all": "全部（由新到舊）",
+        "show_news": "顯示新聞",
+        "refresh_news": "重新整理新聞",
+        "article_count": "{count} 篇文章",
+        "save": "收藏",
+        "empty_articles": "沒有符合篩選條件的文章。請試著擴大時間範圍，或稍候自動更新完成。",
+        "footer_note": "資料來自公開 RSS 來源（BBC、Reuters 等），僅供學習與個人研究使用。",
+        "favorites_title": "我的最愛",
+        "favorites_subtitle": "你收藏、稍後閱讀的文章（由新到舊）",
+        "back_home": "返回首頁",
+        "saved_count": "已收藏 {count} 篇文章",
+        "saved_at": "收藏於 {time}",
+        "empty_favorites": "尚未收藏任何文章。請到首頁點擊「收藏」按鈕。",
+        "refresh_done_title": "新聞更新完成",
+        "refresh_done_body": "已從所有 RSS 來源抓取最新標題並存入資料庫。",
+        "block_international": "國際（世界／地緣政治）",
+        "block_tech": "科技",
+        "block_business": "財經／市場",
+        "block_bigtech": "大型科技公司（NVIDIA／Google／Amazon／Microsoft／Meta）",
+        "block_nvidia": "NVIDIA",
+        "block_google": "Google",
+        "block_microsoft": "Microsoft",
+        "block_zh": "中文（國際／科技／財經）",
+        "cat_international": "國際",
+        "cat_us": "美國",
+        "cat_tech": "科技",
+        "cat_business": "財經",
+        "cat_zh": "中文",
+        "lang_switch": "English",
+    },
+    "en": {
+        "app_title": "News Aggregator",
+        "app_subtitle": "Filter by section, source, and keyword — up to 50 articles per section",
+        "my_favorites": "My Favorites",
+        "section": "Section",
+        "source": "Source",
+        "all_sources": "All sources",
+        "keyword": "Keyword",
+        "keyword_placeholder": "e.g. AI, rates, chips…",
+        "time_range": "Time range",
+        "period_day": "Today / last 24 hours",
+        "period_week": "Last week",
+        "period_month": "Last month",
+        "period_quarter": "Last quarter (3 months)",
+        "period_halfyear": "Last 6 months",
+        "period_all": "All (newest first)",
+        "show_news": "Show news",
+        "refresh_news": "Refresh News",
+        "article_count": "{count} article(s)",
+        "save": "Save",
+        "empty_articles": "No articles match your filters. Try a wider time range or wait for auto-refresh.",
+        "footer_note": "Data from public RSS feeds (BBC, Reuters, etc.). For learning and personal research only.",
+        "favorites_title": "My Favorites",
+        "favorites_subtitle": "Articles you saved to read later (newest first)",
+        "back_home": "Back to home",
+        "saved_count": "{count} saved article(s)",
+        "saved_at": "Saved {time}",
+        "empty_favorites": "No saved articles yet. Go to the home page and click Save on any headline.",
+        "refresh_done_title": "News refresh complete",
+        "refresh_done_body": "Fetched the latest headlines from all RSS sources and stored them in the database.",
+        "block_international": "International (World / Geopolitics)",
+        "block_tech": "Tech",
+        "block_business": "Business / Markets",
+        "block_bigtech": "Big Tech (NVIDIA / Google / Amazon / Microsoft / Meta)",
+        "block_nvidia": "NVIDIA",
+        "block_google": "Google",
+        "block_microsoft": "Microsoft",
+        "block_zh": "Chinese (International / Tech / Business)",
+        "cat_international": "International",
+        "cat_us": "US",
+        "cat_tech": "Tech",
+        "cat_business": "Business",
+        "cat_zh": "Chinese",
+        "lang_switch": "中文",
+    },
+}
+
+BLOCK_KEYS = [
+    "international",
+    "tech",
+    "business",
+    "bigtech",
+    "nvidia",
+    "google",
+    "microsoft",
+    "zh",
+]
+
+_fetch_lock = threading.Lock()
+_refresh_running = False
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row  # 讓模板可以用 a.title 這種點記法
     return conn
 
@@ -45,6 +156,14 @@ def init_db():
                 published_at TEXT,
                 summary TEXT,
                 created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             )
             """
         )
@@ -137,73 +256,193 @@ RSS_SOURCES = [
 
 def fetch_and_store_news(limit_per_source: int = 5) -> None:
     """從多個 RSS 來源抓取新聞並存入 SQLite。"""
+    with _fetch_lock:
+        conn = get_connection()
+        with conn:
+            for source in RSS_SOURCES:
+                try:
+                    feed = feedparser.parse(source["url"])
+                except Exception as e:
+                    # 某些來源可能因為 SSL 或暫時性網路問題失敗，避免整個程式當掉
+                    print(
+                        f"[RSS] 來源抓取失敗：{source['name']} ({source['url']}) - {e}"
+                    )
+                    continue
+
+                count = 0
+                for entry in feed.entries:
+                    if count >= limit_per_source:
+                        break
+
+                    title = entry.get("title", "").strip()
+                    link = entry.get("link", "").strip()
+                    summary = entry.get("summary", "").strip()
+
+                    if not title or not link:
+                        continue
+
+                    # 避免重複（以 URL 為基準）
+                    cur = conn.execute(
+                        "SELECT 1 FROM articles WHERE url = ?",
+                        (link,),
+                    )
+                    if cur.fetchone():
+                        continue
+
+                    published_at_str = None
+                    if hasattr(entry, "published_parsed") and entry.published_parsed:
+                        published_at = datetime(
+                            entry.published_parsed.tm_year,
+                            entry.published_parsed.tm_mon,
+                            entry.published_parsed.tm_mday,
+                            entry.published_parsed.tm_hour,
+                            entry.published_parsed.tm_min,
+                            entry.published_parsed.tm_sec,
+                            tzinfo=timezone.utc,
+                        )
+                        # 存成 ISO 字串，顯示時直接印
+                        published_at_str = published_at.astimezone(
+                            timezone.utc
+                        ).strftime("%Y-%m-%d %H:%M")
+
+                    created_at_str = datetime.now(timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M"
+                    )
+
+                    conn.execute(
+                        """
+                        INSERT INTO articles
+                            (title, source, category, url, summary, published_at, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            title,
+                            source["name"],
+                            source["category"],
+                            link,
+                            summary,
+                            published_at_str,
+                            created_at_str,
+                        ),
+                    )
+                    count += 1
+
+        set_last_refresh()
+
+
+def get_article_count() -> int:
+    conn = get_connection()
+    row = conn.execute("SELECT COUNT(*) AS c FROM articles").fetchone()
+    conn.close()
+    return int(row["c"])
+
+
+def get_last_refresh() -> datetime | None:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT value FROM meta WHERE key = 'last_refresh'"
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    try:
+        return datetime.fromisoformat(row["value"])
+    except ValueError:
+        return None
+
+
+def set_last_refresh() -> None:
+    now_str = datetime.now(timezone.utc).isoformat()
     conn = get_connection()
     with conn:
-        for source in RSS_SOURCES:
-            try:
-                feed = feedparser.parse(source["url"])
-            except Exception as e:
-                # 某些來源可能因為 SSL 或暫時性網路問題失敗，避免整個程式當掉
-                print(f"[RSS] 來源抓取失敗：{source['name']} ({source['url']}) - {e}")
-                continue
+        conn.execute(
+            """
+            INSERT INTO meta (key, value) VALUES ('last_refresh', ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (now_str,),
+        )
+    conn.close()
 
-            count = 0
-            for entry in feed.entries:
-                if count >= limit_per_source:
-                    break
 
-                title = entry.get("title", "").strip()
-                link = entry.get("link", "").strip()
-                summary = entry.get("summary", "").strip()
+def should_refresh() -> bool:
+    last = get_last_refresh()
+    if last is None:
+        return True
+    return datetime.now(timezone.utc) - last > timedelta(
+        minutes=REFRESH_INTERVAL_MINUTES
+    )
 
-                if not title or not link:
-                    continue
 
-                # 避免重複（以 URL 為基準）
-                cur = conn.execute(
-                    "SELECT 1 FROM articles WHERE url = ?",
-                    (link,),
-                )
-                if cur.fetchone():
-                    continue
+def ensure_news_loaded() -> None:
+    """資料庫為空時同步抓取，避免冷啟動後首頁空白。"""
+    if get_article_count() == 0:
+        fetch_and_store_news(limit_per_source=5)
 
-                published_at_str = None
-                if hasattr(entry, "published_parsed") and entry.published_parsed:
-                    published_at = datetime(
-                        entry.published_parsed.tm_year,
-                        entry.published_parsed.tm_mon,
-                        entry.published_parsed.tm_mday,
-                        entry.published_parsed.tm_hour,
-                        entry.published_parsed.tm_min,
-                        entry.published_parsed.tm_sec,
-                        tzinfo=timezone.utc,
-                    )
-                    # 存成 ISO 字串，顯示時直接印
-                    published_at_str = published_at.astimezone(
-                        timezone.utc
-                    ).strftime("%Y-%m-%d %H:%M")
 
-                created_at_str = datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%d %H:%M"
-                )
+def background_refresh_if_needed() -> None:
+    """背景執行：資料庫空或超過更新間隔時自動抓取。"""
+    import time
 
-                conn.execute(
-                    """
-                    INSERT INTO articles
-                        (title, source, category, url, summary, published_at, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        title,
-                        source["name"],
-                        source["category"],
-                        link,
-                        summary,
-                        published_at_str,
-                        created_at_str,
-                    ),
-                )
-                count += 1
+    time.sleep(3)
+    if get_article_count() == 0 or should_refresh():
+        fetch_and_store_news(limit_per_source=5)
+
+
+def start_background_refresh() -> None:
+    thread = threading.Thread(target=background_refresh_if_needed, daemon=True)
+    thread.start()
+
+
+def trigger_background_refresh() -> bool:
+    """非阻塞啟動背景更新，供 cron-job.org 等外部排程使用。"""
+    global _refresh_running
+    if _refresh_running:
+        return False
+
+    def _run() -> None:
+        global _refresh_running
+        _refresh_running = True
+        try:
+            fetch_and_store_news(limit_per_source=5)
+        finally:
+            _refresh_running = False
+
+    threading.Thread(target=_run, daemon=True).start()
+    return True
+
+
+def get_block_options(lang: str) -> list[tuple[str, str]]:
+    labels = TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANG])
+    return [
+        (key, labels[f"block_{key}"])
+        for key in BLOCK_KEYS
+    ]
+
+
+def get_category_labels(lang: str) -> dict[str, str]:
+    labels = TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANG])
+    return {
+        "international": labels["cat_international"],
+        "us": labels["cat_us"],
+        "tech": labels["cat_tech"],
+        "business": labels["cat_business"],
+        "zh": labels["cat_zh"],
+    }
+
+
+def t(key: str, **kwargs: str | int) -> str:
+    lang = getattr(g, "lang", DEFAULT_LANG)
+    text = TRANSLATIONS.get(lang, TRANSLATIONS[DEFAULT_LANG]).get(key, key)
+    if kwargs:
+        return text.format(**kwargs)
+    return text
+
+
+def redirect_with_filters(endpoint: str, **kwargs: str):
+    """保留篩選參數與語言設定。"""
+    lang = getattr(g, "lang", DEFAULT_LANG)
+    return redirect(url_for(endpoint, lang=lang, **kwargs))
 
 
 def get_articles(period: str = "day", category: str | None = None, limit: int = 20):
@@ -473,46 +712,59 @@ def get_company_articles(company_key: str, period: str = "day", limit: int = 20)
 app = Flask(__name__)
 
 # 部署到雲端時（如 Render）會用 gunicorn 啟動，不會跑下面 if __name__，
-# 所以在此先確保資料庫已建立，首次請到網頁點「手動更新新聞」抓資料
+# 因此在模組載入時初始化資料庫並啟動背景更新
 init_db()
+start_background_refresh()
 
 
-BLOCK_OPTIONS = [
-    ("international", "International (World / Geopolitics)"),
-    ("tech", "Tech"),
-    ("business", "Business / Markets"),
-    ("bigtech", "Big Tech (NVIDIA / Google / Amazon / Microsoft / Meta)"),
-    ("nvidia", "NVIDIA"),
-    ("google", "Google"),
-    ("microsoft", "Microsoft"),
-    ("zh", "Chinese (International / Tech / Business)"),
-]
+@app.before_request
+def set_language() -> None:
+    lang = request.args.get("lang")
+    if lang in SUPPORTED_LANGS:
+        g.lang = lang
+        g.set_lang_cookie = True
+    else:
+        cookie_lang = request.cookies.get("lang", DEFAULT_LANG)
+        g.lang = cookie_lang if cookie_lang in SUPPORTED_LANGS else DEFAULT_LANG
+        g.set_lang_cookie = False
 
-CATEGORY_LABELS = {
-    "international": "International",
-    "us": "US",
-    "tech": "Tech",
-    "business": "Business",
-    "zh": "Chinese",
-}
+
+@app.after_request
+def save_language_cookie(response):
+    if getattr(g, "set_lang_cookie", False):
+        response.set_cookie("lang", g.lang, max_age=365 * 24 * 3600)
+    return response
+
+
+def other_lang() -> str:
+    return "en" if g.lang == "zh-TW" else "zh-TW"
 
 
 @app.context_processor
 def inject_ui_labels():
-    return {"category_labels": CATEGORY_LABELS}
+    return {
+        "t": t,
+        "lang": lambda: g.lang,
+        "other_lang": other_lang,
+        "category_labels": get_category_labels(getattr(g, "lang", DEFAULT_LANG)),
+        "html_lang": lambda: "zh-Hant" if g.lang == "zh-TW" else "en",
+    }
 
 
 @app.route("/")
 def index():
+    ensure_news_loaded()
+
     period = request.args.get("period", "day")
     block = request.args.get("block", "international")
     selected_source = request.args.get("source") or ""
     keyword = request.args.get("q", "").strip()
+    block_options = get_block_options(g.lang)
 
     # 只抓選中的區塊，每區 30～50 篇（此處用 50）
     limit = 50
     articles: list[sqlite3.Row] = []
-    block_label = next((label for v, label in BLOCK_OPTIONS if v == block), block)
+    block_label = next((label for v, label in block_options if v == block), block)
 
     if block == "international":
         articles = get_articles(
@@ -558,7 +810,7 @@ def index():
         period=period,
         block=block,
         block_label=block_label,
-        block_options=BLOCK_OPTIONS,
+        block_options=block_options,
         sources=sources,
         selected_source=selected_source,
         keyword=keyword,
@@ -568,9 +820,33 @@ def index():
 
 @app.route("/refresh")
 def refresh():
-    # 手動觸發更新（抓一次 RSS）
     fetch_and_store_news(limit_per_source=5)
-    return render_template("refresh_done.html")
+    block = request.args.get("block", "international")
+    period = request.args.get("period", "day")
+    return redirect_with_filters("index", block=block, period=period)
+
+
+@app.route("/cron/refresh")
+def cron_refresh():
+    """供 cron-job.org 等外部排程呼叫：立即回應，背景抓 RSS（避免 30 秒逾時）。"""
+    started = trigger_background_refresh()
+    if started:
+        return jsonify({"status": "started"}), 202
+    return jsonify({"status": "already_running"}), 200
+
+
+@app.route("/health")
+def health():
+    """健康檢查：確認服務已啟動且資料庫可讀。"""
+    return jsonify(
+        {
+            "status": "ok",
+            "articles": get_article_count(),
+            "last_refresh": (
+                get_last_refresh().isoformat() if get_last_refresh() else None
+            ),
+        }
+    ), 200
 
 
 def get_favorites(limit: int = 200):
@@ -591,11 +867,16 @@ def get_favorites(limit: int = 200):
 
 @app.post("/favorite")
 def favorite():
+    lang = request.form.get("lang")
+    if lang in SUPPORTED_LANGS:
+        g.lang = lang
+        g.set_lang_cookie = True
+
     article_id = request.form.get("article_id")
     block = request.form.get("block", "international")
     period = request.form.get("period", "day")
     if not article_id:
-        return redirect(url_for("index", block=block, period=period))
+        return redirect_with_filters("index", block=block, period=period)
 
     conn = get_connection()
     with conn:
@@ -628,7 +909,7 @@ def favorite():
                 ),
             )
 
-    return redirect(url_for("index", block=block, period=period))
+    return redirect_with_filters("index", block=block, period=period)
 
 
 @app.route("/favorites")
@@ -638,7 +919,7 @@ def favorites():
 
 
 if __name__ == "__main__":
-    fetch_and_store_news(limit_per_source=5)
+    ensure_news_loaded()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 

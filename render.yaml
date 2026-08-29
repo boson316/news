@@ -1,8 +1,10 @@
-# Render Blueprint (free tier)
-# Push this folder to a GitHub repo root, then: render.com → New → Blueprint
+# Render Blueprint（免費方案）
+# 線上：https://boson-news-app.onrender.com
+# 定時更新（cron-job.org 每 14 分鐘）：https://boson-news-app.onrender.com/cron/refresh
+# GitHub：https://github.com/boson316/news
 services:
   - type: web
-    name: news-aggregator
+    name: boson-news-app
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
