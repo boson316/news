@@ -32,4 +32,4 @@ git push origin main
 1. **+ 建立定時工作**
 2. URL：`https://boson-news-app.onrender.com/cron/refresh`
 3. 方法：GET
-4. 排程：每 14 分鐘
+4. 排程：每 **10 分鐘**（`*/10 * * * *`）

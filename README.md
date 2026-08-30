@@ -17,7 +17,7 @@ A lightweight news aggregator built with Python, Flask, and SQLite. Pulls headli
 | Chinese default | Traditional Chinese UI; switch to English in the header |
 | Auto-fetch | Fetches RSS on first visit when the database is empty |
 | Background refresh | Refreshes every 30 minutes after startup if stale |
-| Scheduled cron | Use cron-job.org every 14 minutes → `/cron/refresh` |
+| Scheduled cron | cron-job.org every **10 minutes** → `/cron/refresh` |
 | Filters | Section, source, keyword, time range |
 | Favorites | Save articles to read later |
 
@@ -50,7 +50,7 @@ On Render's free tier, the service sleeps after ~15 minutes of inactivity:
 1. [cron-job.org](https://cron-job.org) → **Create cronjob**
 2. **URL:** `https://boson-news-app.onrender.com/cron/refresh`
 3. **Method:** GET
-4. **Schedule:** every 14 minutes
+4. **Schedule:** every **10 minutes** (`*/10 * * * *`)
 5. Check **Execution history** for `{"status":"started"}` or `{"status":"already_running"}`
 
 > `/cron/refresh` responds immediately and fetches RSS in the background (avoids the 30s cron-job.org timeout).

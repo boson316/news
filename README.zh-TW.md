@@ -17,7 +17,7 @@
 | 預設中文 | 介面預設繁體中文，右上角可切 English |
 | 自動抓取 | 首頁開啟時若資料庫為空，自動抓 RSS |
 | 背景更新 | 啟動後每 30 分鐘背景更新（若已過期） |
-| 定時排程 | 建議用 cron-job.org 每 14 分鐘呼叫 `/cron/refresh` |
+| 定時排程 | cron-job.org 每 **10 分鐘** 呼叫 `/cron/refresh` |
 | 篩選 | 類別、來源、關鍵字、時間範圍 |
 | 收藏 | 標記稍後閱讀 |
 
@@ -50,7 +50,7 @@ Render 免費方案約 15 分鐘無流量會休眠。設定定時工作：
 1. [cron-job.org](https://cron-job.org) → **+ 建立定時工作**
 2. **URL：** `https://boson-news-app.onrender.com/cron/refresh`
 3. **方法：** GET
-4. **排程：** 每 14 分鐘
+4. **排程：** 每 **10 分鐘**（`*/10 * * * *`）
 5. Execution history 應見 `{"status":"started"}` 或 `{"status":"already_running"}`
 
 > `/cron/refresh` 立刻回應、背景抓 RSS，避免 cron-job.org 30 秒逾時。
