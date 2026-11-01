@@ -135,4 +135,11 @@ python app.py
 
 ## RSS 來源
 
-編輯 `app.py` 的 `RSS_SOURCES` 增減來源。目前含 BBC、Reuters、TechCrunch、TechNews、自由時報、ETtoday、聯合新聞網、BBC 中文、DW 中文等。
+來源清單在 `scripts/build_site.py` 的 `RSS_SOURCES`（舊 Flask 版在 `app.py`）。新增前可到 **Actions → Check RSS feeds → Run workflow** 檢測網址是否可用（腳本：`scripts/check_feeds.py`）。
+
+| 分類 | 來源 |
+|------|------|
+| 國際 | BBC World、BBC US & Canada、Reuters、AP News（Reuters／AP 透過 Google News） |
+| 財經 | Bloomberg、CNBC、MarketWatch、自由時報 財經、ETtoday 財經、經濟日報、中央社 財經、Yahoo 奇摩 財經 |
+| 科技 | TechCrunch、Wired、MIT Technology Review、Hacker News、科技新報、科技報橘、iThome |
+| 中文 | BBC 中文網、DW 德國之聲 中文、自由時報 國際、公視新聞、報導者、紐約時報中文網、法廣 RFI 中文 |
