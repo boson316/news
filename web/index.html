@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>新聞蒐集</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="index">
+    <header>
+      <div class="header-top">
+        <div>
+          <h1 data-i18n="app_title">新聞蒐集</h1>
+          <p data-i18n="app_subtitle"></p>
+          <p class="updated-at" id="updated-at"></p>
+        </div>
+        <a class="lang-switch" id="lang-switch" href="#"></a>
+      </div>
+      <nav>
+        <a class="button secondary" id="favorites-link" href="favorites.html" data-i18n="my_favorites"></a>
+      </nav>
+    </header>
+
+    <section class="controls">
+      <form class="filter-form" id="filter-form">
+        <label>
+          <span data-i18n="section"></span>:
+          <select name="block" id="block"></select>
+        </label>
+        <label>
+          <span data-i18n="source"></span>:
+          <select name="source" id="source"></select>
+        </label>
+        <label>
+          <span data-i18n="keyword"></span>:
+          <input type="text" name="q" id="q" />
+        </label>
+        <label>
+          <span data-i18n="time_range"></span>:
+          <select name="period" id="period"></select>
+        </label>
+        <button type="submit" data-i18n="show_news"></button>
+        <button type="button" class="button secondary" id="reload" data-i18n="refresh_news"></button>
+      </form>
+    </section>
+
+    <main>
+      <section class="block-content">
+        <h2 id="block-label"></h2>
+        <p class="block-meta" id="block-meta"></p>
+        <ul class="article-list" id="article-list"></ul>
+        <p class="empty" id="empty" hidden></p>
+      </section>
+    </main>
+
+    <footer>
+      <p data-i18n="footer_note"></p>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>
