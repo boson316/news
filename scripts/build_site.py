@@ -38,7 +38,7 @@ EXISTING_DATA_URL = os.environ.get("EXISTING_DATA_URL", "")
 EXISTING_DATA_FILE = os.environ.get("EXISTING_DATA_FILE", "")
 
 KEEP_DAYS = 180  # 保留半年，對應「過去半年」篩選
-MAX_PER_SOURCE = 300  # 每個來源最多保留幾篇，控制 JSON 大小
+MAX_PER_SOURCE = 150  # 每個來源最多保留幾篇，控制 JSON 大小（手機載入速度）
 SUMMARY_MAX_CHARS = 220
 REQUEST_TIMEOUT = 20
 USER_AGENT = "Mozilla/5.0 (compatible; boson-news/1.0; +https://github.com/boson316/news)"
