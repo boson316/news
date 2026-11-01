@@ -11,6 +11,11 @@
       try { var th = localStorage.getItem("boson-news:theme"); if (th === "light" || th === "dark") document.documentElement.dataset.theme = th; } catch (e) {}
     </script>
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="新聞蒐集" />
   </head>
   <body data-page="index">
     <header class="topbar">
@@ -47,12 +52,17 @@
         </div>
       </section>
 
-      <nav class="tabs" id="tabs" role="tablist"></nav>
+      <div class="sticky-nav">
+        <nav class="tabs" id="tabs" role="tablist"></nav>
+      </div>
 
       <div class="filters">
         <div class="chips" id="periods" role="group"></div>
-        <label for="source" class="visually-hidden" data-i18n="source"></label>
-        <select class="select" id="source"></select>
+        <div class="filters-row">
+          <div class="chips segmented" id="content-langs" role="group"></div>
+          <label for="source" class="visually-hidden" data-i18n="source"></label>
+          <select class="select" id="source"></select>
+        </div>
       </div>
 
       <div class="status">
@@ -63,8 +73,11 @@
         </button>
       </div>
 
+      <button class="new-banner" id="new-banner" type="button" hidden></button>
+
       <ul class="article-list" id="article-list"></ul>
       <div class="empty" id="empty" hidden></div>
+      <div class="more"><button class="btn" id="show-more" type="button" hidden></button></div>
     </main>
 
     <button class="icon-btn back-to-top" id="back-to-top" type="button">

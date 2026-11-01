@@ -11,6 +11,11 @@
       try { var th = localStorage.getItem("boson-news:theme"); if (th === "light" || th === "dark") document.documentElement.dataset.theme = th; } catch (e) {}
     </script>
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="新聞蒐集" />
   </head>
   <body data-page="favorites">
     <header class="topbar">
