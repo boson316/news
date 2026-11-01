@@ -2,11 +2,45 @@
 
 **Languages:** [English](README.md) · [中文](README.zh-TW.md)
 
-**線上：** https://boson-news-app.onrender.com
+**線上（GitHub Pages，推薦）：** https://boson316.github.io/news/
+**舊版（Render，會冷啟動）：** https://boson-news-app.onrender.com
 
 使用 Python + Flask + SQLite 的新聞蒐集網站，從多個公開 RSS 來源抓取國際、科技、財經、中文新聞。預設**繁體中文介面**，可切換英文。可本機執行或部署到 Render。
 
 > 僅供個人學習與研究使用，請勿用於商業用途。
+
+---
+
+## GitHub Pages 靜態版（推薦：免費、沒有冷啟動）
+
+GitHub Actions 每 15 分鐘抓一次 RSS，產生靜態網站部署到 GitHub Pages。打開網頁不需要等伺服器喚醒，永久免費。
+
+| 項目 | 說明 |
+|------|------|
+| 抓取 | `scripts/build_site.py`：抓 RSS → 合併線上舊資料 → 輸出 `_site/` |
+| 排程 | `.github/workflows/pages.yml`：每 15 分鐘、push 到 `main`、或手動執行 |
+| 前端 | `web/`（`index.html`、`favorites.html`、`app.js`、`style.css`），篩選在瀏覽器完成 |
+| 歷史 | 保留最近 180 天，每個來源最多 300 篇 |
+| 收藏 | 存在瀏覽器 `localStorage`（每台裝置各自獨立） |
+
+### 第一次啟用
+
+1. 把這些檔案合併到 `main`
+2. GitHub repo → **Settings → Pages → Build and deployment → Source** 選 **GitHub Actions**
+3. **Actions** → **Update news & deploy Pages** → **Run workflow**
+4. 約 1 分鐘後打開 https://boson316.github.io/news/
+
+> GitHub 排程常延遲幾分鐘；repo 若 60 天沒有任何活動，GitHub 會自動暫停排程，到 Actions 頁面重新啟用即可。
+
+### 本機預覽
+
+```bash
+pip install -r requirements.txt
+python scripts/build_site.py
+python -m http.server -d _site 8000
+```
+
+瀏覽器：`http://127.0.0.1:8000`
 
 ---
 

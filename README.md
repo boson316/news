@@ -2,11 +2,43 @@
 
 **Languages:** [English](README.md) · [中文](README.zh-TW.md)
 
-**Live:** https://boson-news-app.onrender.com
+**Live (GitHub Pages, recommended):** https://boson316.github.io/news/
+**Legacy (Render, has cold starts):** https://boson-news-app.onrender.com
 
 A lightweight news aggregator built with Python, Flask, and SQLite. Pulls headlines from public RSS feeds (international, tech, business, Chinese). Default UI is **Traditional Chinese** with an English toggle. Run locally or deploy to Render.
 
 > For personal learning and research only. Not for commercial use.
+
+---
+
+## GitHub Pages static version (recommended: free, no cold starts)
+
+GitHub Actions fetches the RSS feeds every 15 minutes and deploys a static site to GitHub Pages, so the page loads instantly with no server to wake up.
+
+| Item | Description |
+|------|-------------|
+| Fetch | `scripts/build_site.py`: fetch RSS → merge with live data → write `_site/` |
+| Schedule | `.github/workflows/pages.yml`: every 15 min, on push to `main`, or manually |
+| Frontend | `web/` (`index.html`, `favorites.html`, `app.js`, `style.css`); filtering runs in the browser |
+| History | Keeps the last 180 days, up to 300 articles per source |
+| Favorites | Stored in the browser's `localStorage` (per device) |
+
+### First-time setup
+
+1. Merge these files into `main`
+2. Repo **Settings → Pages → Build and deployment → Source** → **GitHub Actions**
+3. **Actions** → **Update news & deploy Pages** → **Run workflow**
+4. Open https://boson316.github.io/news/ after about a minute
+
+> GitHub schedules are often delayed a few minutes. If the repo has no activity for 60 days, GitHub pauses scheduled workflows; re-enable it on the Actions page.
+
+### Local preview
+
+```bash
+pip install -r requirements.txt
+python scripts/build_site.py
+python -m http.server -d _site 8000
+```
 
 ---
 
