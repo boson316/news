@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -41,27 +42,51 @@ MAX_PER_SOURCE = 300  # 每個來源最多保留幾篇，控制 JSON 大小
 SUMMARY_MAX_CHARS = 220
 REQUEST_TIMEOUT = 20
 USER_AGENT = "Mozilla/5.0 (compatible; boson-news/1.0; +https://github.com/boson316/news)"
+HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "application/rss+xml, application/rdf+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+    "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+}
+RETRIES = 2
+RETRY_DELAY = 3  # 秒
 
+GN = "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q="
+
+# 需要修改來源時，可先執行 scripts/check_feeds.py（或 Actions → Check RSS feeds）確認網址可用
 RSS_SOURCES = [
-    # 英文國際新聞
+    # 國際（英文）
     {"name": "BBC World", "category": "international", "url": "https://feeds.bbci.co.uk/news/world/rss.xml"},
     {"name": "BBC US & Canada", "category": "us", "url": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml"},
-    {"name": "Reuters World News", "category": "international", "url": "http://feeds.reuters.com/Reuters/worldNews"},
-    # 英文財經／科技
-    {"name": "Reuters Business News", "category": "business", "url": "http://feeds.reuters.com/reuters/businessNews"},
-    {"name": "Reuters Technology News", "category": "tech", "url": "http://feeds.reuters.com/reuters/technologyNews"},
+    # Reuters、AP 已停止提供官方 RSS，改由 Google News 取得（連結會經過 Google 轉址）
+    {"name": "Reuters", "category": "international", "url": GN + "site:reuters.com+when:1d", "strip_suffix": " - Reuters", "no_summary": True},
+    {"name": "AP News", "category": "international", "url": GN + "site:apnews.com+when:1d", "strip_suffix": " - AP News", "no_summary": True},
+    # 財經（英文）
+    {"name": "Bloomberg", "category": "business", "url": "https://feeds.bloomberg.com/markets/news.rss"},
+    {"name": "CNBC", "category": "business", "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html"},
+    {"name": "MarketWatch", "category": "business", "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories"},
+    # 科技（英文）
     {"name": "TechCrunch", "category": "tech", "url": "https://techcrunch.com/feed/"},
-    {"name": "USA TODAY Tech", "category": "tech", "url": "http://rssfeeds.usatoday.com/tech/"},
-    # 中文科技／財經
+    {"name": "Wired", "category": "tech", "url": "https://www.wired.com/feed/rss"},
+    {"name": "MIT Technology Review", "category": "tech", "url": "https://www.technologyreview.com/feed/"},
+    {"name": "Hacker News", "category": "tech", "url": "https://hnrss.org/frontpage", "no_summary": True},
+    # 科技（中文）
     {"name": "TechNews 科技新報", "category": "tech", "url": "https://technews.tw/tn-rss/"},
     {"name": "TechOrange 科技報橘", "category": "tech", "url": "https://buzzorange.com/techorange/feed/"},
+    {"name": "iThome", "category": "tech", "url": "https://www.ithome.com.tw/rss"},
+    # 財經（中文）
     {"name": "自由時報 財經", "category": "business", "url": "https://news.ltn.com.tw/rss/business.xml"},
     {"name": "ETtoday 財經", "category": "business", "url": "http://feeds.feedburner.com/ettoday/finance"},
-    {"name": "聯合新聞網 產經", "category": "business", "url": "https://fund.udn.com/rss/lists/1002"},
-    # 中文一般新聞
+    {"name": "經濟日報", "category": "business", "url": "https://money.udn.com/rssfeed/news/1001/5591?ch=money"},
+    {"name": "中央社 財經", "category": "business", "url": "https://feeds.feedburner.com/rsscna/finance"},
+    {"name": "Yahoo 奇摩 財經", "category": "business", "url": "https://tw.news.yahoo.com/rss/finance"},
+    # 中文新聞
     {"name": "BBC 中文網", "category": "zh", "url": "https://www.bbc.co.uk/zhongwen/trad/index.xml"},
-    {"name": "DW 德國之聲 中文", "category": "zh", "url": "https://rss.dw.com/rdf/rss-chi"},
+    {"name": "DW 德國之聲 中文", "category": "zh", "url": "https://rss.dw.com/rdf/rss-chi-all"},
     {"name": "自由時報 國際", "category": "zh", "url": "https://news.ltn.com.tw/rss/world.xml"},
+    {"name": "公視新聞", "category": "zh", "url": "https://news.pts.org.tw/xml/newsfeed.xml"},
+    {"name": "報導者", "category": "zh", "url": "https://www.twreporter.org/a/rss2.xml"},
+    {"name": "紐約時報中文網", "category": "zh", "url": "https://cn.nytimes.com/rss/zh-hant/"},
+    {"name": "法廣 RFI 中文", "category": "zh", "url": "https://www.rfi.fr/tw/rss"},
 ]
 
 TAG_RE = re.compile(r"<[^>]+>")
@@ -98,14 +123,25 @@ def entry_time(entry) -> datetime | None:
     return None
 
 
+def download(url: str) -> bytes:
+    """下載 RSS；失敗時等幾秒重試（部分網站同時連線太多會暫時回 403/429）。"""
+    last_err: Exception | None = None
+    for attempt in range(RETRIES + 1):
+        if attempt:
+            time.sleep(RETRY_DELAY * attempt)
+        try:
+            resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=HEADERS)
+            resp.raise_for_status()
+            return resp.content
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+    raise last_err  # type: ignore[misc]
+
+
 def fetch_source(source: dict) -> tuple[dict, list[dict], str | None]:
     """回傳 (來源, 文章清單, 錯誤訊息)。"""
     try:
-        resp = requests.get(
-            source["url"], timeout=REQUEST_TIMEOUT, headers={"User-Agent": USER_AGENT}
-        )
-        resp.raise_for_status()
-        feed = feedparser.parse(resp.content)
+        feed = feedparser.parse(download(source["url"]))
     except Exception as e:  # noqa: BLE001 — 單一來源失敗不影響其他來源
         return source, [], str(e)
 
@@ -113,6 +149,9 @@ def fetch_source(source: dict) -> tuple[dict, list[dict], str | None]:
     items: list[dict] = []
     for entry in feed.entries:
         title = clean_text(entry.get("title", ""))
+        suffix = source.get("strip_suffix")
+        if suffix and title.endswith(suffix):
+            title = title[: -len(suffix)].rstrip()
         link = (entry.get("link") or "").strip()
         if not title or not link.startswith(("http://", "https://")):
             continue
@@ -123,7 +162,7 @@ def fetch_source(source: dict) -> tuple[dict, list[dict], str | None]:
                 "url": link,
                 "source": source["name"],
                 "category": source["category"],
-                "summary": clean_text(entry.get("summary", ""), SUMMARY_MAX_CHARS),
+                "summary": "" if source.get("no_summary") else clean_text(entry.get("summary", ""), SUMMARY_MAX_CHARS),
                 # 沒有發布時間就用第一次抓到的時間，避免被時間篩選排除
                 "published_at": iso(published) if published else seen_at,
             }
@@ -182,7 +221,7 @@ def main() -> int:
 
     fresh: list[dict] = []
     status: list[dict] = []
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    with ThreadPoolExecutor(max_workers=6) as pool:
         for source, items, err in pool.map(fetch_source, RSS_SOURCES):
             if err:
                 print(f"[RSS] ✗ {source['name']}: {err}")

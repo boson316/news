@@ -147,3 +147,16 @@ Open `http://127.0.0.1:5000`
 ## Customize RSS sources
 
 Edit `RSS_SOURCES` in `app.py`. Current feeds include BBC, Reuters, TechCrunch, TechNews, Liberty Times, ETtoday, UDN, BBC Chinese, and DW Chinese.
+
+---
+
+## RSS sources
+
+Sources live in `RSS_SOURCES` in `scripts/build_site.py` (`app.py` for the legacy Flask app). Before adding one, run **Actions → Check RSS feeds → Run workflow** (`scripts/check_feeds.py`) to confirm the URL works.
+
+| Section | Sources |
+|---------|---------|
+| World | BBC World, BBC US & Canada, Reuters, AP News (Reuters/AP via Google News) |
+| Business | Bloomberg, CNBC, MarketWatch, Liberty Times Business, ETtoday Finance, Economic Daily News, CNA Finance, Yahoo TW Finance |
+| Tech | TechCrunch, Wired, MIT Technology Review, Hacker News, TechNews, TechOrange, iThome |
+| Chinese | BBC Chinese, DW Chinese, Liberty Times World, PTS News, The Reporter, NYT Chinese, RFI Chinese |
