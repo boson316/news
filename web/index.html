@@ -3,58 +3,75 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141517" media="(prefers-color-scheme: dark)" />
     <title>新聞蒐集</title>
+    <script>
+      // 先套用主題，避免閃爍
+      try { var th = localStorage.getItem("boson-news:theme"); if (th === "light" || th === "dark") document.documentElement.dataset.theme = th; } catch (e) {}
+    </script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body data-page="index">
-    <header>
-      <div class="header-top">
-        <div>
-          <h1 data-i18n="app_title">新聞蒐集</h1>
-          <p data-i18n="app_subtitle"></p>
-          <p class="updated-at" id="updated-at"></p>
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <a class="brand" href="./" id="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
+          </span>
+          <span data-i18n="app_title"></span>
+        </a>
+        <div class="topbar-actions">
+          <a class="icon-btn" id="favorites-link" href="favorites.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            <span class="label-text" data-i18n="my_favorites"></span>
+            <span class="count" id="fav-count"></span>
+          </a>
+          <button class="icon-btn" id="theme-toggle" type="button"></button>
+          <a class="icon-btn" id="lang-switch" href="#"></a>
         </div>
-        <a class="lang-switch" id="lang-switch" href="#"></a>
       </div>
-      <nav>
-        <a class="button secondary" id="favorites-link" href="favorites.html" data-i18n="my_favorites"></a>
-      </nav>
     </header>
 
-    <section class="controls">
-      <form class="filter-form" id="filter-form">
-        <label>
-          <span data-i18n="section"></span>:
-          <select name="block" id="block"></select>
-        </label>
-        <label>
-          <span data-i18n="source"></span>:
-          <select name="source" id="source"></select>
-        </label>
-        <label>
-          <span data-i18n="keyword"></span>:
-          <input type="text" name="q" id="q" />
-        </label>
-        <label>
-          <span data-i18n="time_range"></span>:
-          <select name="period" id="period"></select>
-        </label>
-        <button type="submit" data-i18n="show_news"></button>
-        <button type="button" class="button secondary" id="reload" data-i18n="refresh_news"></button>
-      </form>
-    </section>
-
-    <main>
-      <section class="block-content">
-        <h2 id="block-label"></h2>
-        <p class="block-meta" id="block-meta"></p>
-        <ul class="article-list" id="article-list"></ul>
-        <p class="empty" id="empty" hidden></p>
+    <main class="container">
+      <section class="intro">
+        <h1 data-i18n="headline"></h1>
+        <p data-i18n="app_subtitle"></p>
+        <div class="search" role="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <label for="q" class="visually-hidden" data-i18n="keyword"></label>
+          <input type="search" id="q" autocomplete="off" enterkeyhint="search" />
+          <button class="icon-btn clear" id="clear-q" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
       </section>
+
+      <nav class="tabs" id="tabs" role="tablist"></nav>
+
+      <div class="filters">
+        <div class="chips" id="periods" role="group"></div>
+        <label for="source" class="visually-hidden" data-i18n="source"></label>
+        <select class="select" id="source"></select>
+      </div>
+
+      <div class="status">
+        <span id="status-text" aria-live="polite"></span>
+        <button class="icon-btn" id="reload" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg>
+          <span data-i18n="refresh_news"></span>
+        </button>
+      </div>
+
+      <ul class="article-list" id="article-list"></ul>
+      <div class="empty" id="empty" hidden></div>
     </main>
 
+    <button class="icon-btn back-to-top" id="back-to-top" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+    </button>
     <footer>
-      <p data-i18n="footer_note"></p>
+      <div class="container" data-i18n="footer_note"></div>
     </footer>
     <script src="app.js"></script>
   </body>
